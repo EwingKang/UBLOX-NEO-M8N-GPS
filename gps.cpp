@@ -1,11 +1,16 @@
 #include "hmc5883l.h"
-#include <SerialStream.h>
+//#include <SerialStream.h>
 #include <string>
 #include <sstream>
 #include <math.h>
 
+#include <iostream>
+#include <chrono>
+#include <thread>
+#include "serial/serial.h"
+
 using namespace std;
-using namespace LibSerial;
+//using namespace LibSerial;
 
 double dmTOdd(double dm){
     int deg = dm/100;
@@ -24,9 +29,10 @@ int main(){
 
 	unsigned char cbuf[512];
 
-	SerialStream serial;
+	//SerialStream serial;
+	serial::Serial serial;
 
-	HMC5883L hmc5883l;
+	//HMC5883L hmc5883l;
 
 	int startupAltitude = -1;
 	double lat;
@@ -44,24 +50,35 @@ int main(){
 	cout << "Starting GPS...\n";
 
 	//UARL GPS StartUp
-	while (!serial.good()) {
-		serial.Open("/dev/ttyAMA0");
-		serial.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
-		serial.SetBaudRate(SerialStreamBuf::BAUD_115200);
-		serial.SetNumOfStopBits(1);
-		serial.SetFlowControl(SerialStreamBuf::FLOW_CONTROL_NONE);
+	//while (!serial.good()) {
+	while (!serial.isOpen()) {
+		//serial.Open("/dev/ttyAMA0");
+		//serial.SetCharSize(SerialStreamBuf::CHAR_SIZE_8);
+		//serial.SetBaudRate(SerialStreamBuf::BAUD_115200);
+		//serial.SetNumOfStopBits(1);
+		//serial.SetFlowControl(SerialStreamBuf::FLOW_CONTROL_NONE);
+		serial.setPort("/dev/ttyAMA1");
+		serial.setBytesize(serial::eightbits);
+		serial.setBaudrate(9600);
+		serial.setStopbits(serial::stopbits_one);
+		serial.setFlowcontrol(serial::flowcontrol_none);
+		serial.setTimeout(3000, 300, 10, 300, 10);
+		serial.open();
 
-		if (serial.good()) {
-			cout << "GPS has been started (/dev/ttyAMA0).\n";
+		//if (serial.good()) {
+		if (serial.isOpen()) {
+			cout << "GPS has been started (/dev/ttyAMA1).\n";
 		}
 		else {
 			cout << "GPS failed to start, retrying in 3 seconds.\n";
-			sleep(3);
+			//sleep(3);
+			std::chrono::seconds timespan(3); // or whatever
+			std::this_thread::sleep_for(timespan);
 		}
 	}
 
 	//I2C Compass StartUp
-	while(1){
+	/*while(1){
 		if(hmc5883l_init(&hmc5883l) != HMC5883L_OKAY){
 			cout << "Compass failed to start\n";
 		}
@@ -69,13 +86,14 @@ int main(){
 			cout << "Compass has been started (/dev/ttyi2c-1).\n";
 			break;
 		}
-	}
+	}*/
 
 	while(1){
 
-		serial >> gps_input;
+		//serial >> gps_input;
+		gps_input = serial.readline();
 
-		hmc5883l_read(&hmc5883l);
+		//hmc5883l_read(&hmc5883l);
 
 		if (gps_input.length() > 0) {
 			if(gps_input.compare(0,6,"$GNGGA") == 0 || gps_input.compare(0,6,"$GNRMC") == 0){
@@ -130,7 +148,7 @@ int main(){
 			    	alt = atof(gps_data[9].c_str());
 			    	fixType = atoi(gps_data[6].c_str());
 			    	satNum = atoi(gps_data[7].c_str());
-			    	heading = hmc5883l._data.orientation_deg;
+			    	//heading = hmc5883l._data.orientation_deg;
 
 			    	cout << string(40, '\n');
 			    	cout << "GPS DATA:\n";
@@ -150,6 +168,9 @@ int main(){
 			    	cout << "No valid GPS signal\n"; 
 			    	continue;
 			    }
+			}
+			else{
+				cout << "WHAT: " << gps_input << endl;
 			}
 		}
 	}
