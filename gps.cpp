@@ -91,11 +91,12 @@ int main(){
 	while(1){
 
 		//serial >> gps_input;
-		gps_input = serial.readline();
+		gps_input = serial.readline(65536, std::string("\r\n"));
 
 		//hmc5883l_read(&hmc5883l);
 
 		if (gps_input.length() > 0) {
+			cout << "WHAT: " << gps_input;
 			if(gps_input.compare(0,6,"$GNGGA") == 0 || gps_input.compare(0,6,"$GNRMC") == 0){
 
 				std::string gps_data[15];
@@ -150,7 +151,7 @@ int main(){
 			    	satNum = atoi(gps_data[7].c_str());
 			    	//heading = hmc5883l._data.orientation_deg;
 
-			    	cout << string(40, '\n');
+			    	cout << string(2, '\n');
 			    	cout << "GPS DATA:\n";
 			    	cout << "Latitude (Deg.M): " << gps_data[2] << "\n";
 			    	cout << "Longitude (Deg.M): " << gps_data[4] << "\n";
@@ -170,7 +171,6 @@ int main(){
 			    }
 			}
 			else{
-				cout << "WHAT: " << gps_input << endl;
 			}
 		}
 	}
